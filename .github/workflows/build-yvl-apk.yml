@@ -66,7 +66,7 @@ jobs:
           echo "APK ready at app/build/outputs/apk/final/YVL-Music-debug.apk"
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: YVL-Music-debug-APK
           path: app/build/outputs/apk/final/YVL-Music-debug.apk
