@@ -1,5 +1,3 @@
-
-
 package iad1tya.echo.music.ui.screens.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -7,19 +5,24 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CloudUpload
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -28,33 +31,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import iad1tya.echo.music.LocalPlayerAwareWindowInsets
-import iad1tya.echo.music.R
-import iad1tya.echo.music.db.entities.Song
-import iad1tya.echo.music.ui.component.IconButton
-import iad1tya.echo.music.ui.component.Material3SettingsGroup
-import iad1tya.echo.music.ui.component.Material3SettingsItem
-import iad1tya.echo.music.ui.menu.AddToPlaylistDialogOnline
-import iad1tya.echo.music.ui.menu.CsvColumnMappingDialog
-import iad1tya.echo.music.ui.menu.CsvImportProgressDialog
-import iad1tya.echo.music.ui.menu.LoadingScreen
-import iad1tya.echo.music.ui.utils.backToMain
-import iad1tya.echo.music.viewmodels.BackupRestoreViewModel
-import iad1tya.echo.music.viewmodels.ConvertedSongLog
-import iad1tya.echo.music.viewmodels.CsvImportState
-import iad1tya.echo.music.constants.LastCloudBackupTimeKey
-import iad1tya.echo.music.constants.EnableCloudBackupKey
-import iad1tya.echo.music.utils.rememberPreference
-import android.app.backup.BackupManager
-import android.content.Intent
-import android.provider.Settings
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
 import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -63,22 +50,26 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.Crossfade
-import androidx.activity.compose.rememberLauncherForActivityResult
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import androidx.compose.runtime.collectAsState
-import iad1tya.echo.music.viewmodels.SyncState
+import iad1tya.echo.music.LocalPlayerAwareWindowInsets
+import iad1tya.echo.music.R
+import iad1tya.echo.music.constants.EnableCloudBackupKey
+import iad1tya.echo.music.constants.LastCloudBackupTimeKey
+import iad1tya.echo.music.db.entities.Song
+import iad1tya.echo.music.drive.DriveAccountInfo
 import iad1tya.echo.music.drive.GoogleDriveSyncManager
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CloudUpload
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import iad1tya.echo.music.ui.component.IconButton
+import iad1tya.echo.music.ui.component.Material3SettingsGroup
+import iad1tya.echo.music.ui.component.Material3SettingsItem
+import iad1tya.echo.music.ui.menu.AddToPlaylistDialogOnline
+import iad1tya.echo.music.ui.menu.CsvColumnMappingDialog
+import iad1tya.echo.music.ui.menu.CsvImportProgressDialog
+import iad1tya.echo.music.ui.menu.LoadingScreen
+import iad1tya.echo.music.ui.utils.backToMain
+import iad1tya.echo.music.utils.rememberPreference
+import iad1tya.echo.music.viewmodels.BackupRestoreViewModel
+import iad1tya.echo.music.viewmodels.ConvertedSongLog
+import iad1tya.echo.music.viewmodels.CsvImportState
+import iad1tya.echo.music.viewmodels.SyncState
 
 enum class BackupSubScreen { MAIN, CLOUD, IMPORT }
 
@@ -91,19 +82,9 @@ fun BackupAndRestore(
 ) {
     var importedTitle by remember { mutableStateOf("") }
     val importedSongs = remember { mutableStateListOf<Song>() }
-    var showChoosePlaylistDialogOnline by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    var isProgressStarted by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    var progressPercentage by rememberSaveable {
-        mutableIntStateOf(0)
-    }
-
-    
+    var showChoosePlaylistDialogOnline by rememberSaveable { mutableStateOf(false) }
+    var isProgressStarted by rememberSaveable { mutableStateOf(false) }
+    var progressPercentage by rememberSaveable { mutableIntStateOf(0) }
     var csvImportState by remember { mutableStateOf<CsvImportState?>(null) }
     var showCsvColumnMapping by rememberSaveable { mutableStateOf(false) }
     var showCsvImportProgress by rememberSaveable { mutableStateOf(false) }
@@ -116,15 +97,11 @@ fun BackupAndRestore(
 
     val backupLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
-            if (uri != null) {
-                viewModel.backup(context, uri)
-            }
+            if (uri != null) viewModel.backup(context, uri)
         }
     val restoreLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri != null) {
-                viewModel.restore(context, uri)
-            }
+            if (uri != null) viewModel.restore(context, uri)
         }
     val importPlaylistFromCsv =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -134,47 +111,46 @@ fun BackupAndRestore(
             csvImportState = previewState
             showCsvColumnMapping = true
         }
-    val importM3uLauncherOnline = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        val result = viewModel.loadM3UOnline(context, uri)
-        importedSongs.clear()
-        importedSongs.addAll(result)
-
-        if (importedSongs.isNotEmpty()) {
-            showChoosePlaylistDialogOnline = true
+    val importM3uLauncherOnline =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            val result = viewModel.loadM3UOnline(context, uri)
+            importedSongs.clear()
+            importedSongs.addAll(result)
+            if (importedSongs.isNotEmpty()) showChoosePlaylistDialogOnline = true
         }
-    }
 
     val (lastCloudBackupTime) = rememberPreference(LastCloudBackupTimeKey, 0L)
     val (isCloudBackupEnabled, setCloudBackupEnabled) = rememberPreference(EnableCloudBackupKey, true)
-    
+
     val formattedBackupTime = remember(lastCloudBackupTime) {
         if (lastCloudBackupTime == 0L) {
             "Never"
         } else {
-            val dateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lastCloudBackupTime), ZoneId.systemDefault())
+            val dateTime = LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(lastCloudBackupTime), ZoneId.systemDefault()
+            )
             dateTime.format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm"))
         }
     }
 
     val syncState by viewModel.syncState.collectAsState()
-    
-    var signedInAccount by remember { androidx.compose.runtime.mutableStateOf(GoogleDriveSyncManager.getSignedInAccount(context)) }
-    
-    val signInLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.data != null) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            try {
-                task.getResult(com.google.android.gms.common.api.ApiException::class.java)
-                signedInAccount = GoogleDriveSyncManager.getSignedInAccount(context)
-                Toast.makeText(context, "Signed in successfully!", Toast.LENGTH_SHORT).show()
-            } catch (e: com.google.android.gms.common.api.ApiException) {
-                Toast.makeText(context, "Sign-in failed: Code ${e.statusCode}", Toast.LENGTH_LONG).show()
-            }
-        } else {
-            Toast.makeText(context, "Sign-in cancelled (no data)", Toast.LENGTH_SHORT).show()
-        }
+
+    var signedInAccount by remember {
+        mutableStateOf<DriveAccountInfo?>(GoogleDriveSyncManager.getSignedInAccount(context))
     }
+
+    val signInLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val handleResult = GoogleDriveSyncManager.handleSignInResult(result.data, context)
+            if (handleResult.isSuccess) {
+                signedInAccount = handleResult.getOrNull()
+                Toast.makeText(context, "Signed in successfully!", Toast.LENGTH_SHORT).show()
+            } else {
+                val errorMsg = handleResult.exceptionOrNull()?.message ?: "Sign-in failed"
+                Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+            }
+        }
 
     var currentScreen by rememberSaveable { mutableStateOf(BackupSubScreen.MAIN) }
 
@@ -185,15 +161,17 @@ fun BackupAndRestore(
     Crossfade(targetState = currentScreen, label = "BackupSubScreen") { screen ->
         Column(
             Modifier
-                .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+                .windowInsetsPadding(
+                    LocalPlayerAwareWindowInsets.current.only(
+                        WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
+                    )
+                )
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(
                 Modifier.windowInsetsPadding(
-                    LocalPlayerAwareWindowInsets.current.only(
-                        WindowInsetsSides.Top
-                    )
+                    LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Top)
                 )
             )
 
@@ -204,7 +182,7 @@ fun BackupAndRestore(
                             Material3SettingsItem(
                                 title = { Text("Cloud Backup (Google Drive)") },
                                 icon = painterResource(R.drawable.cloud),
-                                onClick = { 
+                                onClick = {
                                     Toast.makeText(context, "Soon it will be available", Toast.LENGTH_SHORT).show()
                                 }
                             )
@@ -242,19 +220,25 @@ fun BackupAndRestore(
                         )
                     )
                 }
+
                 BackupSubScreen.CLOUD -> {
                     val account = signedInAccount
-                    
                     if (syncState == SyncState.UPLOADING) {
-                        Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, modifier = androidx.compose.ui.Modifier.fillMaxWidth().padding(32.dp)) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth().padding(32.dp)
+                        ) {
                             CircularProgressIndicator()
-                            Spacer(androidx.compose.ui.Modifier.height(16.dp))
+                            Spacer(Modifier.height(16.dp))
                             Text("Uploading backup to Google Drive...")
                         }
                     } else if (syncState == SyncState.DOWNLOADING) {
-                        Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, modifier = androidx.compose.ui.Modifier.fillMaxWidth().padding(32.dp)) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth().padding(32.dp)
+                        ) {
                             CircularProgressIndicator()
-                            Spacer(androidx.compose.ui.Modifier.height(16.dp))
+                            Spacer(Modifier.height(16.dp))
                             Text("Downloading backup from Google Drive...")
                         }
                     } else {
@@ -268,7 +252,9 @@ fun BackupAndRestore(
                                             description = { Text("Required for instant Cloud Backups") },
                                             icon = painterResource(R.drawable.ic_google),
                                             onClick = {
-                                                signInLauncher.launch(GoogleDriveSyncManager.getSignInIntent(context))
+                                                signInLauncher.launch(
+                                                    GoogleDriveSyncManager.getSignInIntent(context)
+                                                )
                                             }
                                         )
                                     )
@@ -307,6 +293,7 @@ fun BackupAndRestore(
                         )
                     }
                 }
+
                 BackupSubScreen.IMPORT -> {
                     Material3SettingsGroup(
                         title = "Import Data",
@@ -334,7 +321,14 @@ fun BackupAndRestore(
                                 title = { Text("Import 'csv' Playlist") },
                                 icon = painterResource(R.drawable.playlist_add),
                                 onClick = {
-                                    importPlaylistFromCsv.launch(arrayOf("text/csv", "text/comma-separated-values", "application/csv", "text/plain"))
+                                    importPlaylistFromCsv.launch(
+                                        arrayOf(
+                                            "text/csv",
+                                            "text/comma-separated-values",
+                                            "application/csv",
+                                            "text/plain"
+                                        )
+                                    )
                                 }
                             )
                         )
@@ -343,6 +337,7 @@ fun BackupAndRestore(
             }
         }
     }
+
     val titleRes = when (currentScreen) {
         BackupSubScreen.MAIN -> stringResource(R.string.backup_restore)
         BackupSubScreen.CLOUD -> "Cloud Backup"
@@ -395,7 +390,6 @@ fun BackupAndRestore(
         value = progressPercentage,
     )
 
-    
     csvImportState?.let { state ->
         CsvColumnMappingDialog(
             isVisible = showCsvColumnMapping,
@@ -414,9 +408,7 @@ fun BackupAndRestore(
                             context,
                             uri,
                             mappingState,
-                            onProgress = { progress ->
-                                csvImportProgress = progress
-                            },
+                            onProgress = { progress -> csvImportProgress = progress },
                             onLogUpdate = { logs ->
                                 csvRecentLogs.clear()
                                 csvRecentLogs.addAll(logs)
@@ -436,14 +428,10 @@ fun BackupAndRestore(
         )
     }
 
-    
     CsvImportProgressDialog(
         isVisible = showCsvImportProgress,
         progress = csvImportProgress,
         recentLogs = csvRecentLogs.toList(),
-        onDismiss = {
-            
-        },
+        onDismiss = {},
     )
 }
-
