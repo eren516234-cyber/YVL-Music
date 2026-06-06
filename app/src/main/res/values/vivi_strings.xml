@@ -451,7 +451,7 @@
     <string name="wrapped_ready_title">YOUR WRAPPED IS READY!</string>
     <string name="wrapped_ready_subtitle">Time to see what you loved this year.</string>
     <string name="wrapped_thank_you">Thank you for listening</string>
-    <string name="wrapped_special_thanks">YVL Music — Premium Black & White Experience</string>
+    <string name="wrapped_special_thanks">YVL Music — Premium Black &amp; White Experience</string>
     <string name="wrapped_close">Close wrapped</string>
     <string name="wrapped_playlist_title">Your %s Wrapped</string>
     <string name="wrapped_create_playlist">Create playlist</string>
