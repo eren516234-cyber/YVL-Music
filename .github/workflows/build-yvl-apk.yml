@@ -1,4 +1,4 @@
-name: 🎵 Build YVL Debug APK
+name: Build YVL Debug APK
 
 on:
   push:
@@ -31,24 +31,28 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Create local.properties
-        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
       - name: Make gradlew executable
-        run: chmod +x gradlew
+        run: |
+          chmod +x gradlew
 
       - name: Build FOSS Debug APK
-        run: ./gradlew assembleFossDebug --no-daemon --stacktrace
+        run: |
+          ./gradlew assembleFossDebug --no-daemon --stacktrace
 
       - name: List generated APKs
-        run: find app/build/outputs/apk -name "*.apk" | while read f; do echo "Found: $f ($(du -h $f | cut -f1))"; done
+        run: |
+          find app/build/outputs/apk -name "*.apk" -exec ls -lh {} \;
 
       - name: Rename APK to YVL-Music-debug.apk
         run: |
           mkdir -p app/build/outputs/apk/final
           find app/build/outputs/apk -name "*.apk" ! -path "*/final/*" | head -1 | xargs -I{} cp {} app/build/outputs/apk/final/YVL-Music-debug.apk
-          echo "APK ready: YVL-Music-debug.apk"
+          echo "APK ready at app/build/outputs/apk/final/YVL-Music-debug.apk"
 
-      - name: Upload APK — Download here ⬇️
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: YVL-Music-debug-APK
