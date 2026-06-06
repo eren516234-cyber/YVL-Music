@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-debug-apk:
     name: Build Debug APK (No secrets needed)
@@ -38,9 +41,9 @@ jobs:
         run: |
           chmod +x gradlew
 
-      - name: Build FOSS Debug APK
+      - name: Build Universal FOSS Debug APK
         run: |
-          ./gradlew assembleFossDebug --no-daemon --stacktrace
+          ./gradlew :app:assembleUniversalFossDebug --no-daemon --stacktrace
 
       - name: List generated APKs
         run: |

@@ -959,7 +959,7 @@ fun HomeScreen(
                             onClick = { navController.navigate("music_globe") }
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.artist_screen),
+                                painter = painterResource(R.drawable.globe),
                                 contentDescription = "Music Globe",
                                 tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                 modifier = Modifier.size(22.dp)
