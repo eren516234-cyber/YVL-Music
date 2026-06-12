@@ -1,2 +1,1 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+attached_assets/Music-Player-Design_(1)_1781241747210.zip filter=lfs diff=lfs merge=lfs -text
