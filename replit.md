@@ -1,45 +1,76 @@
-# [Project name]
+# YVL Music
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A premium music player app with JioSaavn API integration, real-time lyrics sync, animated themes, and custom font import.
 
 ## Run & Operate
 
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/mockup-sandbox run dev` — run the music player UI
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks from OpenAPI spec
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
+- UI: React + Vite (mockup-sandbox)
 - API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
+- Music API: JioSaavn via meloapi.vercel.app
+- Lyrics: lrclib.net (LRC synced lyrics)
 - Build: esbuild (CJS bundle)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/mockup-sandbox/src/components/mockups/music-player/FullApp.tsx` — main music player app
+- `lib/api-spec/openapi.yaml` — API contract
+- `.github/workflows/build.yml` — GitHub Actions: web build + APK via Capacitor
+
+## Features
+
+- JioSaavn API: real song streaming, search, album art
+- Lyrics: 100% synced with audio using LRC timestamps from lrclib.net
+- 5 lyrics modes: Line, Word, Karaoke, Bubble, Flow
+- 6 animated themes: Dark, Sky, Light, Sunset, Neon, Ocean
+- Custom font import via Google Fonts URL
+- 5 built-in font styles
+- Interactive progress bar with seek
+- Shuffle, Repeat, Prev/Next
+- Notification permission modal
+- Mini player bar
+- Settings with EQ, audio quality, cache clear
+
+## GitHub
+
+Repository: https://github.com/eren516234-cyber/YVL-Music
+APK: GitHub Actions → Build Android APK (runs on every push to main)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Single FullApp.tsx contains the entire UI — keeps the mockup-sandbox self-contained
+- LRC lyrics parsing keeps timestamps; polling audio.currentTime every 80ms for real-time sync
+- Custom font import dynamically injects Google Fonts `<link>` tag and applies to entire app
+- JioSaavn API fetched via meloapi.vercel.app proxy (no API key required)
+- APK build uses Capacitor wrapping the Vite web build
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+YVL Music is a premium music player with real JioSaavn streaming, word-by-word lyrics sync, animated theme backgrounds (sky clouds, neon glows, ocean waves), and deep customization including custom font import from Google Fonts.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- App name: YVL Music
+- Made by: W Shourya
+- No account/login screens — removed from About and Settings
+- Bold/heavy typography throughout
+- GitHub: eren516234-cyber/YVL-Music
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Always run `pnpm install` before typechecking after adding new dependencies
+- Capacitor APK build in GitHub Actions requires Android SDK setup (handled in workflow)
+- meloapi.vercel.app sometimes returns CORS errors — handled with try/catch, falls back to mockTracks
 
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- Preview URL: `/__mockup/preview/music-player/FullApp`
