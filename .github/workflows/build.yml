@@ -1,0 +1,111 @@
+name: Build Web App & APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-web:
+    name: Build Web App
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web app
+        run: pnpm --filter @workspace/mockup-sandbox run build
+        env:
+          PORT: 3000
+          BASE_PATH: /
+          NODE_ENV: production
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: artifacts/mockup-sandbox/dist/
+          retention-days: 30
+
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    needs: build-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web app for Capacitor
+        run: pnpm --filter @workspace/mockup-sandbox run build
+        env:
+          PORT: 3000
+          BASE_PATH: /
+          NODE_ENV: production
+
+      - name: Install Capacitor
+        run: |
+          cd artifacts/mockup-sandbox
+          pnpm add -D @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Init Capacitor
+        run: |
+          cd artifacts/mockup-sandbox
+          npx cap init "YVL Music" "com.wshourya.yvlmusic" --web-dir dist || true
+
+      - name: Add Android platform
+        run: |
+          cd artifacts/mockup-sandbox
+          npx cap add android || true
+          npx cap sync android
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Grant Gradle permissions
+        run: |
+          cd artifacts/mockup-sandbox/android
+          chmod +x gradlew
+
+      - name: Build debug APK
+        run: |
+          cd artifacts/mockup-sandbox/android
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: YVL-Music-debug.apk
+          path: artifacts/mockup-sandbox/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
